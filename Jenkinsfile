@@ -5,31 +5,31 @@ pipeline {
 
         stage('Checkout') {
             agent {
-                docker { image 'php:8.2-cli' }
+                docker { image 'python:3.10-slim' }
             }
             steps {
                 echo '=== Etapa Checkout ==='
-                sh 'php --version'
+                sh 'python --version'
             }
         }
 
         stage('Compilation') {
             agent {
-                docker { image 'php:8.2-cli' }
+                docker { image 'python:3.10-slim' }
             }
             steps {
                 echo '=== Etapa Compilation ==='
-                sh 'echo "Compilando..."'
+                sh 'echo "Compilando proyecto Python..."'
             }
         }
 
         stage('Build') {
             agent {
-                docker { image 'php:8.2-cli' }
+                docker { image 'python:3.10-slim' }
             }
             steps {
                 echo '=== Etapa Build ==='
-                sh 'echo "docker build -t my-php-app ."'
+                sh 'echo "Construyendo imagen o entorno..."'
             }
         }
 
@@ -37,42 +37,38 @@ pipeline {
             agent {
                 docker {
                     image 'python:3.10-slim'
-                    args '-v ${WORKSPACE}:/app -w /app'
+                    args '-u root'
                 }
             }
+            environment {
+                SAFETY_API_KEY = credentials('safety-api-key')
+            }
             steps {
-                echo '=== Etapa SAST - Análisis de dependencias con Safety ==='
-
-                // Clonamos el repositorio PyGoat (si no existe)
-                sh 'cd pygoat'
-
-                // Instalamos dependencias y ejecutamos análisis
+                echo "=== Etapa SCA - Análisis de dependencias con Safety ==="
                 sh '''
-                    cd pygoat
-                    pip install --upgrade pip safety
-                    pip install -r requirements.txt || true
-                    safety check -r requirements.txt --full-report --json > ../safety-report.json || true
+                    python -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install safety
+                    pip install -r requirements.txt
+                    safety scan --key=$SAFETY_API_KEY --json > safety-report.json
                 '''
-
-                // Publicar reporte en Jenkins
-                script {
-                    archiveArtifacts artifacts: 'safety-report.json', onlyIfSuccessful: false
-                }
             }
             post {
                 always {
-                    echo 'Reporte de vulnerabilidades guardado: safety-report.json'
+                    echo "Reporte de vulnerabilidades guardado: safety-report.json"
+                    archiveArtifacts artifacts: 'safety-report.json', allowEmptyArchive: true
                 }
             }
         }
 
         stage('Deploy') {
             agent {
-                docker { image 'php:8.2-cli' }
+                docker { image 'python:3.10-slim' }
             }
             steps {
                 echo '=== Etapa Deploy ==='
-                sh 'echo "docker run my-php-app ."'
+                sh 'echo "Desplegando aplicación Python..."'
             }
         }
     }
