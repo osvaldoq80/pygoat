@@ -50,5 +50,11 @@ pipeline {
 				sh 'echo "docker run my-php-app ."'
 			} 
 		} 
+	}
+        post {
+			always {
+				echo "Reporte de vulnerabilidades guardado: safety-report.json"
+				archiveArtifacts artifacts: 'safety-report.json', fingerprint: true
+			}
 	}	 
 }
