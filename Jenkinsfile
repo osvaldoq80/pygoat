@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     stages {
-	
-	
-		stage('SCA - Safety') {
+
+
+        stage('SCA - Safety') {
             agent {
                 docker {
                     image 'python:3.11'
@@ -25,7 +25,7 @@ pipeline {
                                 fi
 
                                 # Instalar Safety
-                                echo "📦 Instalando Safety CLI..."
+                                echo "Instalando Safety CLI..."
                                 pip install --no-cache-dir safety
 
                                 # Ejecutar el escaneo
@@ -42,22 +42,15 @@ pipeline {
                                     echo "Safety no pudo analizar el archivo (posiblemente error en dependencias)."
                                 else
                                     echo "Safety detectó vulnerabilidades. Revisa el reporte: safety-report.json"
+									exit 1
                                 fi
                             '''
                         }
 
-                        // Revisar si el reporte contiene vulnerabilidades severas (opcional)
-                        def safetyReport = readFile('safety-report.json')
-                        if (safetyReport.contains('"severity": "high"') || safetyReport.contains('"severity": "critical"')) {
-                            echo "Vulnerabilidades críticas detectadas. Marcando build como FAILED."
-                            currentBuild.result = 'FAILURE'
-                        } else {
-                            echo "Sin vulnerabilidades críticas detectadas."
-                            currentBuild.result = 'SUCCESS'
-                        }
+                       
 
                     } catch (err) {
-                        echo "❌ Error general durante el escaneo con Safety: ${err}"
+                        echo "Error general durante el escaneo con Safety: ${err}"
                         currentBuild.result = 'FAILURE'
                     } finally {
                         archiveArtifacts artifacts: 'safety-report.json', fingerprint: true, allowEmptyArchive: true
@@ -65,11 +58,11 @@ pipeline {
                     }
                 }
             }
-			
+
         }
-	
-	
-        
+
+
+
         stage('Compilation') {
             agent {
                 docker { image 'python:3.10-slim' }
@@ -90,7 +83,7 @@ pipeline {
             }
         }
 
-       
+
         stage('Deploy') {
             agent {
                 docker { image 'python:3.10-slim' }
