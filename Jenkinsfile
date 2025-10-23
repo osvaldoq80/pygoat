@@ -9,7 +9,7 @@ pipeline {
 				}
 			}
 			steps {
-				withCredentials([string(credentialsId: 'API Key Safety', variable: 'API_KEY')]) {
+				withCredentials([string(credentialsId: 'safety-api-key', variable: 'API_KEY')]) {
 					sh '''
 						pip install safety
 						set -e
