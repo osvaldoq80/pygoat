@@ -3,53 +3,52 @@ pipeline {
     stages {
 
         stage('Safety SCA Scan') {
-			agent {
-				docker {
-					image 'python:3.11'
-					args '-u root -v $WORKSPACE:/workspace -w /workspace'
-				}
-			}
-			steps {
-				withCredentials([string(credentialsId: 'safety-api-key', variable: 'API_KEY')]) {
-					script {
-						try {
-							sh '''
-								echo "=== Instalando Safety ==="
-								pip install --quiet safety
+            agent {
+                docker {
+                    image 'python:3.11'
+                    args '-u root -v $WORKSPACE:/workspace -w /workspace'
+                }
+            }
+            steps {
+                withCredentials([string(credentialsId: 'safety-api-key', variable: 'API_KEY')]) {
+                    script {
+                        try {
+                            sh '''
+                                echo "=== Instalando Safety ==="
+                                pip install --quiet safety
 
-								echo "=== Ejecutando escaneo de dependencias ==="
-								set +e
-								# Generar el reporte dentro del volumen compartido
-								safety --key $API_KEY --stage cicd scan --output json > /workspace/safety-report.json 2>&1
-								STATUS=$?
-								set -e
+                                echo "=== Ejecutando escaneo de dependencias ==="
+                                set +e
+                                safety --key $API_KEY --stage cicd scan --output json > safety-report.json 2>&1
+                                STATUS=$?
+                                set -e
 
-								echo "Código de salida de Safety: $STATUS"
-								if [ "$STATUS" -eq 0 ]; then
-									echo "No se detectaron vulnerabilidades."
-								elif [ "$STATUS" -eq 1 ]; then
-									echo "Vulnerabilidades encontradas. Revisa el reporte safety-report.json"
-								elif [ "$STATUS" -eq 64 ]; then
-									echo "Error: No se encontró requirements.txt o falló la configuración."
-								else
-									echo "Error inesperado (exit code $STATUS)."
-								fi
-								# No interrumpir el pipeline
-								exit 0
-							'''
-						} catch (err) {
-							echo "Error ejecutando Safety: ${err}"
-							currentBuild.result = 'FAILURE'
-						} finally {
-							echo "Guardando reporte (si existe)..."
-							sh 'ls -lh /workspace/safety-report.json || echo "No se generó safety-report.json"'
-							archiveArtifacts artifacts: 'safety-report.json', fingerprint: true, allowEmptyArchive: true
-						}
-					}
-				}
-			}
-		}
+                                echo "Código de salida de Safety: $STATUS"
+                                if [ "$STATUS" -eq 0 ]; then
+                                    echo "No se detectaron vulnerabilidades."
+                                elif [ "$STATUS" -eq 1 ]; then
+                                    echo "Vulnerabilidades encontradas. Revisa el reporte safety-report.json"
+                                elif [ "$STATUS" -eq 64 ]; then
+                                    echo "Error: No se encontró requirements.txt o falló la configuración."
+                                else
+                                    echo "Error inesperado (exit code $STATUS)."
+                                fi
 
+                                # Permitir que el pipeline continúe
+                                exit 0
+                            '''
+                        } catch (err) {
+                            echo "Error ejecutando Safety: ${err}"
+                            currentBuild.result = 'FAILURE'
+                        } finally {
+                            echo "Guardando reporte (si existe)..."
+                            sh 'ls -lh safety-report.json || echo "No se generó safety-report.json"'
+                            archiveArtifacts artifacts: 'safety-report.json', fingerprint: true, allowEmptyArchive: true
+                        }
+                    }
+                }
+            }
+        }
 
         stage('Compilation') {
             agent { docker { image 'php:8.2-cli' } }
