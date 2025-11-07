@@ -13,7 +13,7 @@ pipeline {
 					sh '''
 						pip install safety
 						set -e
-						safety --key $API_KEY --stage cicd scan --output json > safety-report.json
+						safety --key $API_KEY --stage cicd scan --output json > /var/jenkins_home/workspace/safety-report.json
 						STATUS=$?
 						set +e
 
