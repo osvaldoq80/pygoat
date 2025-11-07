@@ -68,8 +68,8 @@ pipeline {
 
     post {
         always {
-            echo "📜 Post: Verificando archivo de reporte..."
-            sh 'ls -lh safety-report.json || echo "⚠️ Reporte no encontrado"'
+            echo "Post: Verificando archivo de reporte..."
+            sh 'ls -lh safety-report.json || echo "Reporte no encontrado"'
             archiveArtifacts artifacts: 'safety-report.json', fingerprint: true, allowEmptyArchive: true
         }
     }
